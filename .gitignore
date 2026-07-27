@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+# training outputs: adapters and checkpoints are large, keep only the JSON artifacts
+final/
+*.safetensors
+*.bin
+*.pt
+results-*/
+!results/
+*.log
+.DS_Store

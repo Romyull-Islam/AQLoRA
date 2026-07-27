@@ -1,0 +1,19 @@
+# AQSLoRA dependencies (pinned to the versions used for all reported results).
+# Python 3.12.  torch is a CUDA build — see setup.sh for the CUDA index-url note.
+# ⚠ V100 / Volta (sm_70) servers: torch>=2.8 cu128+/cu130 wheels DROPPED Volta.
+#   Use:  pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cu126
+#   (driver-compat: any 12.x/13.x driver runs cu126 wheels)
+torch==2.11.0
+transformers==5.10.2
+peft==0.19.1
+bitsandbytes==0.49.2
+datasets==5.0.0
+accelerate==1.13.0
+hqq==0.2.8.post1
+# metrics / plotting
+rouge_score
+nltk==3.9.4
+numpy==2.4.4
+scipy==1.17.1
+matplotlib==3.10.9
+sentencepiece
