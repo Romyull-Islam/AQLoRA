@@ -1,0 +1,84 @@
+{
+  "model": "Qwen/Qwen2.5-7B",
+  "results": [
+    {
+      "name": "fp16 (anchor)",
+      "kind": "fp16",
+      "footprint_gib": 14.185,
+      "nominal_avg_bits": 16.0,
+      "wikitext2_ppl": 6.0903
+    },
+    {
+      "name": "bnb-nf4-dq (QLoRA ref)",
+      "kind": "bnb",
+      "footprint_gib": 5.069,
+      "nominal_avg_bits": 4.0,
+      "wikitext2_ppl": 6.2967,
+      "load_s": 7.3,
+      "ppl_s": 500.3
+    },
+    {
+      "name": "hqq-uniform-4bit",
+      "kind": "hqq",
+      "footprint_gib": 5.069,
+      "nominal_avg_bits": 4.0,
+      "wikitext2_ppl": 6.3152,
+      "load_s": 40.9,
+      "ppl_s": 505.0
+    },
+    {
+      "name": "hqq-uniform-3bit",
+      "kind": "hqq",
+      "footprint_gib": 4.462,
+      "nominal_avg_bits": 3.0,
+      "wikitext2_ppl": 7.1824,
+      "load_s": 45.4,
+      "ppl_s": 570.2
+    },
+    {
+      "name": "hqq-uniform-2bit",
+      "kind": "hqq",
+      "footprint_gib": 3.55,
+      "nominal_avg_bits": 2.0,
+      "wikitext2_ppl": 350.6417,
+      "load_s": 39.3,
+      "ppl_s": 507.6
+    },
+    {
+      "name": "hqq-adapt base3 [self_attn.k_proj,self_attn.v_proj]@4",
+      "kind": "hqq",
+      "footprint_gib": 4.471,
+      "nominal_avg_bits": 3.016,
+      "wikitext2_ppl": 7.0415,
+      "load_s": 45.5,
+      "ppl_s": 567.8
+    },
+    {
+      "name": "hqq-adapt base2 [self_attn.k_proj,self_attn.v_proj]@8",
+      "kind": "hqq",
+      "footprint_gib": 3.622,
+      "nominal_avg_bits": 2.094,
+      "wikitext2_ppl": 50.437,
+      "load_s": 40.5,
+      "ppl_s": 507.3
+    },
+    {
+      "name": "hqq-adapt base2 [self_attn.k_proj,self_attn.v_proj]@4",
+      "kind": "hqq",
+      "footprint_gib": 3.574,
+      "nominal_avg_bits": 2.031,
+      "wikitext2_ppl": 51.8768,
+      "load_s": 40.3,
+      "ppl_s": 507.2
+    },
+    {
+      "name": "hqq-3tier fp16[self_attn.k_proj] base4 2bit[mlp.down_proj,mlp.up_proj]",
+      "kind": "hqq",
+      "footprint_gib": 4.256,
+      "nominal_avg_bits": 2.929,
+      "wikitext2_ppl": 13.3812,
+      "load_s": 40.9,
+      "ppl_s": 513.9
+    }
+  ]
+}

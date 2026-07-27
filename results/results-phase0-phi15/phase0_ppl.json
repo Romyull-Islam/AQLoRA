@@ -1,0 +1,84 @@
+{
+  "model": "microsoft/phi-1_5",
+  "results": [
+    {
+      "name": "fp16 (anchor)",
+      "kind": "fp16",
+      "footprint_gib": 2.642,
+      "nominal_avg_bits": 16.0,
+      "wikitext2_ppl": 18.5212
+    },
+    {
+      "name": "bnb-nf4-dq (QLoRA ref)",
+      "kind": "bnb",
+      "footprint_gib": 0.954,
+      "nominal_avg_bits": 4.0,
+      "wikitext2_ppl": 18.9715,
+      "load_s": 2.4,
+      "ppl_s": 72.2
+    },
+    {
+      "name": "hqq-uniform-4bit",
+      "kind": "hqq",
+      "footprint_gib": 0.953,
+      "nominal_avg_bits": 4.0,
+      "wikitext2_ppl": 18.9387,
+      "load_s": 9.1,
+      "ppl_s": 87.8
+    },
+    {
+      "name": "hqq-uniform-3bit",
+      "kind": "hqq",
+      "footprint_gib": 0.841,
+      "nominal_avg_bits": 3.0,
+      "wikitext2_ppl": 20.9619,
+      "load_s": 8.7,
+      "ppl_s": 137.3
+    },
+    {
+      "name": "hqq-uniform-2bit",
+      "kind": "hqq",
+      "footprint_gib": 0.672,
+      "nominal_avg_bits": 2.0,
+      "wikitext2_ppl": 112.2993,
+      "load_s": 7.1,
+      "ppl_s": 88.8
+    },
+    {
+      "name": "hqq-adapt base3 [self_attn.q_proj,self_attn.k_proj]@4",
+      "kind": "hqq",
+      "footprint_gib": 0.86,
+      "nominal_avg_bits": 3.167,
+      "wikitext2_ppl": 20.7032,
+      "load_s": 7.6,
+      "ppl_s": 98.2
+    },
+    {
+      "name": "hqq-adapt base2 [self_attn.q_proj,self_attn.k_proj]@8",
+      "kind": "hqq",
+      "footprint_gib": 0.813,
+      "nominal_avg_bits": 3.0,
+      "wikitext2_ppl": 81.349,
+      "load_s": 6.8,
+      "ppl_s": 88.6
+    },
+    {
+      "name": "hqq-adapt base2 [self_attn.q_proj,self_attn.k_proj]@4",
+      "kind": "hqq",
+      "footprint_gib": 0.719,
+      "nominal_avg_bits": 2.333,
+      "wikitext2_ppl": 83.6478,
+      "load_s": 8.6,
+      "ppl_s": 88.8
+    },
+    {
+      "name": "hqq-3tier fp16[self_attn.q_proj] base4 2bit[self_attn.dense,self_attn.v_proj]",
+      "kind": "hqq",
+      "footprint_gib": 1.047,
+      "nominal_avg_bits": 4.667,
+      "wikitext2_ppl": 31.1449,
+      "load_s": 7.4,
+      "ppl_s": 86.7
+    }
+  ]
+}

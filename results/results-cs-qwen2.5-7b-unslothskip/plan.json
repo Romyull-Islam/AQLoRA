@@ -1,0 +1,26 @@
+{
+  "model": "Qwen/Qwen2.5-7B",
+  "mode": "aqslora",
+  "task": "commonsense",
+  "rank": 8,
+  "seed": 42,
+  "quant_type": "nf4",
+  "double_quant": true,
+  "sensitive_frac": 0.2,
+  "adapter_frac": 1.0,
+  "placement": "sparsity",
+  "quant_backend": "bnb",
+  "attn": "sdpa",
+  "skip_modules": [
+    "model.layers.0.self_attn",
+    "model.layers.1.self_attn",
+    "model.layers.2.self_attn",
+    "model.layers.2.mlp",
+    "model.layers.3.self_attn",
+    "model.layers.3.mlp",
+    "model.layers.4.mlp",
+    "model.layers.6.mlp",
+    "model.layers.25.mlp",
+    "model.layers.26.mlp"
+  ]
+}

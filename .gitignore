@@ -6,7 +6,6 @@ final/
 *.safetensors
 *.bin
 *.pt
-results-*/
-!results/
+/results-*/
 *.log
 .DS_Store
