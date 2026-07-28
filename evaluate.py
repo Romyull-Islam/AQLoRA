@@ -1,23 +1,8 @@
 #!/usr/bin/env python3
-"""
-AQSLoRA — EVALUATION (no training).
+"""Evaluation. Rebuilds the exact quantized base from the run's plan.json, then
+scores the 8 commonsense tasks, GSM8K, or WikiText-2 perplexity.
 
-Loads a base model + a trained adapter (produced by finetune.py) and scores it.
-Because it reads <adapter-dir>/plan.json, it rebuilds the *exact* quantized base
-the adapter was trained on (same fp16-protected layers for AQSLoRA).
-
-Metrics (choose any; commonsense is the DoRA/LLM-Adapters standard):
-  --commonsense   accuracy on the 8 held-out test sets  -> report["commonsense"]
-  --ppl           WikiText-2 perplexity                  -> report["wikitext2_ppl_final"]
-  --gen           leak-free webglm ROUGE/BLEU/EM         -> report["generation"]
-
-Writes/merges <adapter-dir>/report.json (combining train_report.json + these metrics).
-
-Examples
---------
-  python evaluate.py --adapter-dir results-aqslora-commonsense-r8 --commonsense
-  python evaluate.py --adapter-dir results-aqslora-commonsense-r8 --commonsense --ppl \
-                     --cs-max-eval 300          # quick subset
+Merges its metrics into <adapter-dir>/report.json.
 """
 import argparse
 import os
@@ -63,7 +48,7 @@ def main():
     log(f"plan: mode={plan['mode']} model={plan['model']} "
         f"sensitive={plan.get('sensitive_frac')} skip={len(plan.get('skip_modules') or [])} layers")
 
-    # ---- rebuild the identical quantized base
+    # Rebuild the identical quantized base
     model, tokenizer, base_gib = core.load_base_model(
         plan["model"], plan["mode"], plan.get("skip_modules") or [],
         quant_type=plan.get("quant_type", "nf4"),
@@ -73,14 +58,14 @@ def main():
         attn_impl=plan.get("attn", "sdpa"),
         fp32_protected=bool(plan.get("fp32_protected")))
 
-    # ---- attach the trained adapter (unless we want the raw base)
+    # Attach the trained adapter (unless we want the raw base)
     if not ARGS.base_only:
         adapter_path = os.path.join(ARGS.adapter_dir, "final")
         model = PeftModel.from_pretrained(model, adapter_path)
         log(f"loaded adapter from {adapter_path}")
     model.eval()
 
-    # ---- start from the training-side report if present, else fresh
+    # Start from the training-side report if present, else fresh
     report_path = os.path.join(ARGS.adapter_dir, "report.json")
     train_report_path = os.path.join(ARGS.adapter_dir, "train_report.json")
     report = core.load_json(train_report_path) if os.path.exists(train_report_path) else dict(plan)

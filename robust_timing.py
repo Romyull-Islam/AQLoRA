@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
-"""Robust timing estimate from repeated runs on a shared node.
+"""Timing estimate from repeated runs on a shared node.
 
-Contention can only ever SLOW a run, never speed it up, so the samples are
-one-sided: the true uncontended speed sits at the fast end, and slow runs are
-interference. A plain mean is therefore biased downward by however much
-interference happened to occur, and a plain max keeps a single lucky run.
-
-Estimator: find the TIGHTEST CLUSTER of k consecutive samples (smallest spread
-among the fastest values) and average it. This discards interference-slowed
-outliers while still averaging several runs, so it is stable without being
-a single-sample maximum.
+Contention only slows a run, never speeds it up, so the samples have a ceiling at
+the true speed and a slow tail. The estimate is the mean of the fastest half:
+several runs, so not one lucky maximum, but without the interference-slowed tail.
 """
 import json, glob, statistics as st, sys
 

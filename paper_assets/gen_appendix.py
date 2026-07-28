@@ -18,7 +18,7 @@ def load(p):
     return json.load(open(p)) if os.path.exists(p) else None
 
 
-# ---- C: full lever ladder ------------------------------------------------
+# C: full lever ladder
 order = ['q0-eager', 'q1-sdpa', 'q2-dropout0', 'q3-grouplen', 'q4-fusedopt', 'q5-nogc',
          'a0-classic', 'a1-speedprof', 'a5-depth07-notrunc', 'a2-depth07', 'a4-depth05',
          'a3-depth07-nogc', 'l1-lora16', 'r1-rslora', 'e1-edge-aqs', 'e2-edge-qlora']
@@ -46,7 +46,7 @@ with open('table_lever_full.tex', 'w') as f:
     f.write("\\bottomrule\n\\end{tabular}\n")
 print("wrote table_lever_full.tex")
 
-# ---- 6: edge feasibility (measured V100 + bandwidth-bound extrapolation) --
+# 6: edge feasibility (measured V100 + bandwidth-bound extrapolation)
 # At batch 1 / short sequence, LoRA training is memory-bandwidth-bound, not
 # compute-bound: the V100 edge run reached only ~1.3 effective TFLOPS despite
 # the card's ~112 peak, because it streams weights once per token. So the
@@ -85,7 +85,7 @@ if aqs and ql:
         f.write("\\bottomrule\n\\end{tabular}\n")
     print("wrote table_edge.tex")
 
-# ---- 7.1: E3 placement grid ---------------------------------------------
+# 7.1: E3 placement grid
 e3 = {}
 for name in ['sparsity07', 'weightnorm07', 'random07', 'sparsity05', 'weightnorm05', 'random05']:
     d = load(f'{ROOT}/results-e3-phi15-{name}/report.json')

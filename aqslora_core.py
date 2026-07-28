@@ -1,23 +1,10 @@
 #!/usr/bin/env python3
-"""
-AQSLoRA core — shared internals for `finetune.py` and `evaluate.py`.
+"""AQLoRA core: profiling pass, precision and placement plans, model loading,
+data pipelines, and evaluation helpers.
 
-This module holds everything both scripts need (so training and evaluation are
-cleanly separated but never drift apart): the adaptive-precision profiler, the
-quantized model loader, LoRA attachment, the Alpaca/webglm data pipelines, and
-the metrics (WikiText-2 PPL, leak-free generation, commonsense accuracy).
-
-AQSLoRA method in one paragraph
--------------------------------
-1. Profile each linear layer on a CPU fp16 copy: block-wise NF4 reconstruction
-   error (sensitivity) + near-zero weight fraction (sparsity). One pass, no search.
-2. Keep the top-K most quantization-fragile layers in fp16; store the rest in
-   bitsandbytes NF4 (+ double-quant). lm_head is always fp16.
-3. Attach LoRA adapters only to the least-sparse (most informative) layers.
-4. Optionally compose rank-stabilized scaling (rsLoRA, alpha/sqrt(r)).
-
-Nothing here reads argv/env; callers pass every knob explicitly, so the exact
-same functions build the model at train time and at eval time.
+The profiling pass measures each linear layer's block-wise NF4 reconstruction
+error on CPU. A budget then keeps the top-K most damaged layers in fp16 and
+adapts a chosen subset. No search, no calibration data.
 """
 
 import gc
@@ -43,9 +30,7 @@ def log(msg):
     print(f"[aqslora] {msg}", flush=True)
 
 
-# ==========================================================================
 # 1. Profiling: per-layer sensitivity (NF4 error) and sparsity, on CPU fp16.
-# ==========================================================================
 NF4_LEVELS = torch.tensor(
     [-1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453,
      -0.28444138169288635, -0.18477343022823334, -0.09105003625154495, 0.0,
@@ -114,15 +99,11 @@ def _block_idx(name):
 def make_adapter_plan(stats, adapter_frac, placement="sparsity", seed=42):
     """Choose which layers get LoRA adapters.
 
-    placement:
-      'sparsity'   — least-sparse (fewest near-zero weights) layers anywhere.
-      'depth'      — the TOP `adapter_frac` fraction of layers by block depth
-                     (ties broken by density). Because no adapter exists below
-                     the cut, autograd stops the backward pass at the lowest
-                     adapted block — lower blocks skip recompute + backprop.
-      'weightnorm' — largest mean |w| layers (Act-LoRA-style baseline; reviewer
-                     control for the sparsity criterion).
-      'random'     — uniform random layer subset (control baseline).
+    sparsity   : least-sparse layers anywhere (the default).
+    depth      : top fraction by block depth, so autograd stops the backward
+                 pass at the lowest adapted block.
+    weightnorm : largest mean |w| layers (control).
+    random     : uniform random subset (control).
     """
     k = max(1, int(len(stats) * adapter_frac))
     if placement == "weightnorm":
@@ -167,18 +148,11 @@ def build_plan(model_id, mode, sensitive_frac, adapter_frac, placement="sparsity
     return skip_modules, adapter_layers, leaves
 
 
-# --------------------------------------------------------------------------
-# Sensitivity-gated backward-layer dropping ("zero-search DropBP").
-# The per-block drop probability comes from the SAME profiling pass that sets
-# precision and placement: robust (low NF4-error) blocks are dropped in the
-# backward pass more often, fragile ones are kept. A dropped block still runs
-# its forward (model output intact) but under no_grad, so its activations are
-# not stored and its adapters get no gradient that step; the residual passes the
-# gradient through as identity. Cuts backward compute + activation memory.
-# Requires gradient checkpointing OFF (otherwise the recompute re-samples the
-# drop RNG). Mechanism follows DropBP (Woo et al., 2024); our part is the
-# calibration-free per-block schedule from the profiling map.
-# --------------------------------------------------------------------------
+# Sensitivity-gated backward-layer dropping. The per-block drop probability
+# comes from the same profiling pass: robust blocks are dropped from the
+# backward pass more often, fragile ones kept. A dropped block still runs its
+# forward under no_grad, so the residual passes the gradient through unchanged.
+# Needs gradient checkpointing off. Mechanism follows DropBP (Woo et al. 2024).
 def _find_decoder_layers(model):
     best = None
     for name, mod in model.named_modules():
@@ -231,9 +205,7 @@ def apply_backward_drop(model, stats, base_p):
     return model
 
 
-# ==========================================================================
 # 2. Model + adapters (explicit params — no globals)
-# ==========================================================================
 def _wrap_fp32_compute(model, skip_modules):
     """Compute protected (fp16-stored) layers in fp32.
 
@@ -372,9 +344,7 @@ def attach_lora(model, mode, rank, adapter_layers, all_leaves,
     return model, trainable
 
 
-# ==========================================================================
 # 3. Data pipelines
-# ==========================================================================
 def build_prompt(question):
     return f"Instruct: Answer the following question.\nQuestion: {question}\n{RESPONSE_MARKER}"
 
@@ -402,7 +372,7 @@ def prepare_webglm(tokenizer, max_len, smoke=False):
     return train, test_tok, test
 
 
-# ---- Commonsense reasoning (DoRA / LLM-Adapters protocol) -----------------
+# Commonsense reasoning (DoRA / LLM-Adapters protocol)
 ALPACA_NO_INPUT = (
     "Below is an instruction that describes a task. "
     "Write a response that appropriately completes the request.\n\n"
@@ -458,7 +428,7 @@ def prepare_commonsense_train(tokenizer, max_len, max_train=-1, smoke=False):
     return train_tok, eval_tok
 
 
-# ---- Math reasoning (MetaMathQA-20K -> GSM8K, ABBA/LoRA-One protocol) -----
+# Math reasoning (MetaMathQA-20K -> GSM8K)
 def prepare_math_train(tokenizer, max_len, subset=20000, smoke=False):
     """Tokenize a MetaMathQA subset, completion-only loss, Alpaca template."""
     ds = load_dataset("meta-math/MetaMathQA", split="train")
@@ -593,9 +563,7 @@ class CompletionCollator:
         }
 
 
-# ==========================================================================
 # 4. Metrics
-# ==========================================================================
 @torch.no_grad()
 def wikitext2_ppl(model, tokenizer, max_len=2048, stride=512):
     """Sliding-window perplexity on wikitext-2-raw test (standard protocol)."""
@@ -705,9 +673,7 @@ def commonsense_accuracy(model, tokenizer, eval_dir, max_eval=-1, batch_size=16)
     return per_task
 
 
-# ==========================================================================
 # 5. Small IO helpers shared by the two entry points
-# ==========================================================================
 def save_json(obj, path):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w") as f:

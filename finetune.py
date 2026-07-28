@@ -1,21 +1,8 @@
 #!/usr/bin/env python3
-"""
-AQSLoRA — FINE-TUNING (training only).
+"""Training entry point. Every method and lever is a command-line flag.
 
-Profiles the model (adaptive precision + adapter placement), loads it quantized,
-attaches LoRA, trains, and saves:
-  <out>/final/            the trained adapter (+ tokenizer)
-  <out>/plan.json         the exact quant/adapter plan  -> lets evaluate.py rebuild
-                          the identical base model
-  <out>/train_report.json time / peak mem / params / base-model size / (optional) base PPL
-
-Evaluation is a SEPARATE step — run `evaluate.py --adapter-dir <out>` afterwards.
-
-Examples
---------
-  python finetune.py --model microsoft/phi-1_5 --mode aqslora --task commonsense \
-                     --sensitive-frac 0.20 --adapter-frac 1.0 --rslora-scaling
-  python finetune.py --model microsoft/phi-1_5 --mode qlora --task commonsense
+Writes the adapter, plan.json (so evaluate.py can rebuild the identical base) and
+train_report.json. Evaluation is a separate step: run evaluate.py afterwards.
 """
 import argparse
 import os
@@ -46,7 +33,7 @@ def parse_args():
     p.add_argument("--cs-max-train", type=int, default=-1)
     p.add_argument("--output-dir", default=None)
     p.add_argument("--seed", type=int, default=42)
-    # ---- speed levers (each one is an ablation dial) --------------------
+    # Speed levers (each one is an ablation dial)
     p.add_argument("--placement",
                    choices=["sparsity", "depth", "weightnorm", "random"],
                    default="sparsity",
@@ -129,7 +116,7 @@ def main():
     t0 = time.time()
     torch.cuda.empty_cache()
 
-    # ---- profile + adaptive plan (deterministic from weights)
+    # Profile + adaptive plan (deterministic from weights)
     skip_modules, adapter_layers, leaves = core.build_plan(
         ARGS.model, ARGS.mode, ARGS.sensitive_frac, ARGS.adapter_frac,
         placement=ARGS.placement, seed=ARGS.seed)
@@ -140,7 +127,7 @@ def main():
         log(f"OVERRIDE: fp16 skip list from {ARGS.skip_modules_file} "
             f"({len(skip_modules)} entries)")
 
-    # ---- load quantized base
+    # Load quantized base
     model, tokenizer, base_gib = core.load_base_model(
         ARGS.model, ARGS.mode, skip_modules,
         quant_type=ARGS.quant_type, double_quant=not ARGS.no_double_quant,
@@ -153,7 +140,7 @@ def main():
         ppl_base = core.wikitext2_ppl(model, tokenizer)
         log(f"wikitext-2 ppl (quantized base, no adapters): {ppl_base:.4f}")
 
-    # ---- data
+    # Data
     if ARGS.task == "commonsense":
         train_ds, eval_ds = core.prepare_commonsense_train(
             tokenizer, ARGS.max_seq_len, max_train=ARGS.cs_max_train, smoke=ARGS.smoke_test)
@@ -164,7 +151,7 @@ def main():
         train_ds, eval_ds, _ = core.prepare_webglm(
             tokenizer, ARGS.max_seq_len, smoke=ARGS.smoke_test)
 
-    # ---- adapters
+    # Adapters
     if ARGS.max_steps > 0:
         total_steps = ARGS.max_steps
     else:
@@ -201,7 +188,7 @@ def main():
         bd_stats, _ = core.profile_layers(ARGS.model)
         model = core.apply_backward_drop(model, bd_stats, ARGS.backward_drop)
 
-    # ---- training arguments
+    # Training arguments
     targs = TrainingArguments(
         output_dir=OUTPUT_DIR,
         per_device_train_batch_size=ARGS.batch_size,
@@ -282,12 +269,12 @@ def main():
     log(f"training done in {train_minutes:.1f} min | peak {peak_gib:.2f} GiB | "
         f"eval_loss {final_eval['eval_loss']:.4f}")
 
-    # ---- save adapter + tokenizer
+    # Save adapter + tokenizer
     adapter_dir = os.path.join(OUTPUT_DIR, "final")
     trainer.save_model(adapter_dir)
     tokenizer.save_pretrained(adapter_dir)
 
-    # ---- save the plan so evaluate.py rebuilds the IDENTICAL base
+    # Save the plan so evaluate.py rebuilds the IDENTICAL base
     core.save_json({
         "model": ARGS.model,
         "mode": ARGS.mode,
@@ -305,7 +292,7 @@ def main():
         "skip_modules": skip_modules,
     }, os.path.join(OUTPUT_DIR, "plan.json"))
 
-    # ---- training-side report (evaluate.py appends the quality metrics)
+    # Training-side report (evaluate.py appends the quality metrics)
     core.save_json({
         "model": ARGS.model,
         "mode": ARGS.mode,

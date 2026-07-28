@@ -196,7 +196,7 @@ def main():
         with open(os.path.join(ARGS.out, "phase0_ppl.json"), "w") as f:
             json.dump({"model": ARGS.model, "results": results}, f, indent=2)
 
-    # ---- summary table
+    # Summary table
     log("\n================ PHASE-0a SUMMARY ================")
     log(f"{'config':40s} {'GiB':>7s} {'avgbit':>7s} {'wt2_ppl':>9s}")
     for r in results:

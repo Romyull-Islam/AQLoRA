@@ -1,23 +1,8 @@
 #!/usr/bin/env python3
-"""Standalone FAIR-TIMING script (run on an exclusive, idle GPU).
+"""Throughput measurement: steady-state steps/s and real (non-pad) tokens/s
+under cuda.synchronize, with a discarded warmup.
 
-Trains each method for a FIXED number of steps and reports minutes, peak memory,
-steps/sec, REAL tokens/sec (non-pad) and padding waste. Uses the SAME code path
-as finetune.py (aqslora_core) so per-step time is representative.
-No accuracy/PPL here — quality comes from the full finetune.py + evaluate.py runs.
-
-Speed levers are exposed 1:1 with finetune.py so every lever can be A/B timed:
-  --placement {sparsity,depth} --truncate-backprop/--no-truncate-backprop
-  --lora-dropout --optim --attn --no-grad-ckpt --group-by-length --compile
-  --quant-backend {bnb,hqq}
-
-Edge / phone-GPU profile:
-  --edge   preset: batch-size 1, grad-accum 16, seq-len 256, rank 4  (a realistic
-           on-device configuration), plus a FLOPs-based extrapolation of step
-           latency to phone-class GPU budgets (2/4/8 effective fp16 TFLOPS).
-
-usage: python timing.py --mode aqslora --sensitive-frac 0.20 --adapter-frac 1.0 \
-                        --model microsoft/phi-1_5 --max-steps 220 --batch-size 6 --gpus 0
+Use robust_timing.py to combine repeated runs into one estimate.
 """
 import argparse
 import json
@@ -44,7 +29,7 @@ def parse_args():
     p.add_argument("--output-dir", default="./timing-out")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--tag", default="", help="free-form label copied into timing.json")
-    # ---- speed levers (mirror finetune.py) ------------------------------
+    # Speed levers (mirror finetune.py)
     p.add_argument("--placement",
                    choices=["sparsity", "depth", "weightnorm", "random"],
                    default="sparsity")

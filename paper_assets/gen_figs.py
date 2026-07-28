@@ -62,8 +62,8 @@ PTS = [p for p in [
 ] if p]
 
 
-# ---- FIG 1: Pareto (accuracy vs training time). Legend, not inline labels,
-#      so the crowded cluster stays readable. Faster = left (natural). --------
+# FIG 1: Pareto (accuracy vs training time). Legend, not inline labels,
+#      so the crowded cluster stays readable. Faster = left (natural).
 def fig_pareto():
     from matplotlib.lines import Line2D
     fig, ax = plt.subplots(figsize=(5.0, 3.6))
@@ -91,7 +91,7 @@ def fig_pareto():
         handles.append(Line2D([0], [0], marker=p["mk"], ls="", markersize=7,
                               markerfacecolor=p["color"], markeredgecolor="black",
                               markeredgewidth=0.6, label=lab))
-    ax.set_xlabel("training time (min, single V100) — lower is faster")
+    ax.set_xlabel("training time (min, single V100); lower is faster")
     ax.set_ylabel("Commonsense 8-task accuracy (%)")
     ax.grid(True, color=C["grid"], lw=0.5)
     from matplotlib.ticker import FormatStrFormatter
@@ -109,7 +109,7 @@ def fig_pareto():
     print("wrote fig_pareto.pdf")
 
 
-# ---- FIG 2: per-layer NF4 sensitivity (motivating: damage concentrated) ----
+# FIG 2: per-layer NF4 sensitivity (motivating: damage concentrated)
 def fig_sensitivity():
     prof = json.load(open("profile_phi15.json"))
     eps = np.array(sorted([l["eps"] for l in prof], reverse=True)) * 1e5
@@ -132,7 +132,7 @@ def fig_sensitivity():
     print(f"wrote fig_sensitivity.pdf (top-20% carry {frac:.0f}% of error)")
 
 
-# ---- FIG 3: speed-lever waterfall (tokens/s across the ladder) ----
+# FIG 3: speed-lever waterfall (tokens/s across the ladder)
 def fig_levers():
     rows = {json.load(open(j))["tag"]: json.load(open(j))
             for j in glob.glob(f"{ROOT}/ablation-phi-1_5/*/timing.json")}
@@ -170,7 +170,7 @@ def fig_levers():
     print("wrote fig_levers.pdf")
 
 
-# ---- FIG 4: memory (base + trainable/activation overhead) ----
+# FIG 4: memory (base + trainable/activation overhead)
 def fig_memory():
     order = ["lora16", "dora16", "qlora", "rslora", "loftq",
              "aqslora-q-nors", "aqslora-s-nors"]
@@ -207,7 +207,7 @@ def fig_memory():
     print("wrote fig_memory.pdf")
 
 
-# ---- FIG 5: placement-criterion ablation (E3; the audit-mandatory control) --
+# FIG 5: placement-criterion ablation (E3; the audit-mandatory control)
 def fig_placement():
     def a(name):
         d = rj(name)

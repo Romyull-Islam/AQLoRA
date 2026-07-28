@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
-"""Precision-budget dial: WikiText-2 PPL of the quantized base (no adapters).
-
-Regenerates the numbers behind the paper's precision-budget table with artifacts
-kept in this bundle. For each quantizer (NF4+DQ, fp4 without double quant) and
-each protection budget rho, build the plan with the same profiler the method
-uses, load the base, and measure WikiText-2 perplexity. No training, no adapters,
-so this isolates the quantization itself.
-
-Run: CUDA_VISIBLE_DEVICES=<gpu> python precision_dial_ppl.py --model microsoft/phi-1_5
+"""Precision-budget dial: WikiText-2 perplexity of the quantized base, with no
+adapters, as the protection budget rho grows. Isolates the quantization itself.
 """
 import argparse, gc, json, os, time
 
