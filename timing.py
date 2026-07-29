@@ -186,6 +186,8 @@ def main():
                       "edge": A.edge},
            "batch_size": A.batch_size, "grad_accum": A.grad_accum,
            "max_seq_len": A.max_seq_len, "rank": A.rank, "max_steps": A.max_steps,
+           "seed": A.seed, "warmup_skip": A.warmup_skip,
+           "torch": __import__("torch").__version__,
            "total_minutes_all_steps": round(total_min, 3),
            "steady_seconds": round(steady_s, 2), "steady_steps": steps,
            "steps_per_sec": round(sps, 4),
