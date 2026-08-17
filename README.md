@@ -16,6 +16,10 @@ timing.py              throughput measurement (steady state, cuda.synchronize)
 robust_timing.py       fast-anchored estimator over repeated timing runs
 precision_dial_ppl.py  base perplexity against the protection budget
 phase0_isomem_ppl.py   sub-4-bit and multi-tier study (the negative result)
+arch_profile.py        what a layer budget costs per architecture
+make_ranking_controls.py  builds top-K / random / bottom-K layer sets
+ranking_null_distribution.py  the ranking against budget-matched random draws
+residual_protect_probe.py  two-stage NF4 as a cheaper protection tier (offline)
 scripts/               campaign launchers
 paper_assets/          builds the figures and appendix tables from the artifacts
 results/               report.json / timing.json for every run in the paper
@@ -77,27 +81,53 @@ print(sum(c[t] for t in T) / 8 * 100)
 
 Timing runs on a shared node, so the samples are one-sided: interference can
 only slow a run, never speed it up. Each configuration is measured several times,
-interleaved across methods so drift affects all of them equally, and the estimate
-is the mean of the fastest half. `robust_timing.py` prints the individual samples
-alongside the estimate so it can be checked:
+interleaved across methods, and the estimate is the mean of the fastest half.
+`robust_timing.py` prints the individual samples alongside the estimate:
 
 ```
-./scripts/retime_all.sh
-python robust_timing.py timing-session2-phi15
+python robust_timing.py results/timing-sess-phi15-s2
 ```
 
-The noise floor is measured, not assumed: QLoRA, rsLoRA and LoftQ have identical
-per-step compute, so their spread bounds the measurement error.
+Three findings from this protocol shape how the numbers should be read, and the
+paper's headline speed figures come from the last of them:
+
+- Fix the measurement duration, not the step count. A fixed step count gives
+  fast models systematically shorter measurements and wider noise floors; four
+  sweeps were discarded before this was understood
+  (`scripts/run_timing_llama_fixed.sh`).
+- Measure the floor from a duplicated arm. rsLoRA and LoftQ are only nearly
+  compute-identical to QLoRA; running QLoRA twice under different labels gives a
+  floor with no assumption in it, and it is wider than the proxy
+  (`scripts/run_timing_floors.sh`).
+- A within-session floor understates the real uncertainty. Repeating whole
+  sessions moves the numbers far more than any within-session error bar
+  predicts, so the paper reports speed as mean and standard deviation over nine
+  clean sessions (`scripts/run_timing_sessions.sh`; sweeps that fail the floor
+  test are in `results/` too, as the audit trail).
 
 Wall-clock minutes in the accuracy tables come from shared-node runs and are
 indicative only. They are not timing measurements.
 
+Seeds do not make these runs reproducible: three runs at one seed spread as
+widely as six runs at different seeds, because the training does not enable
+deterministic kernels. The error bars measure run-to-run variation.
+
 ## Negative results
 
-Two things in the repo did not work and are reported as such:
+Four things in the repo did not work and are reported as such:
 
+- The NF4-error ranking itself: at a fixed budget, ten random layer selections
+  matched to the same parameter count recover more base perplexity on average
+  than the top-K selection, and downstream accuracy cannot separate top-K,
+  random, and bottom-K (`make_ranking_controls.py`,
+  `ranking_null_distribution.py`, `results/ranking_null.json`). The count of
+  protected layers carries the effect; the identity does not measurably.
+- The weight-density rule for choosing which layers to adapt does no better than
+  a random subset at the same budget (`--placement sparsity|weightnorm|random`).
+- A two-stage NF4 protection tier (`residual_protect_probe.py`,
+  `--protect-tier residual`) removes 110x of the protected layers' quantization
+  error at a third of fp16's memory premium, and is still dominated: lowering
+  the budget reaches the same accuracy at less memory and no speed cost.
 - `phase0_isomem_ppl.py` — pushing robust layers below 4 bits. Uniform 2-bit
   raises WikiText-2 perplexity from 18.97 to 112 at 1.4B and from 6.30 to 351 at
   7B, and every multi-tier plan containing a 2-bit tier inherits that.
-- The weight-density rule for choosing which layers to adapt does no better than
-  a random subset at the same budget (`--placement sparsity|weightnorm|random`).
