@@ -1,0 +1,92 @@
+% AQLoRA architecture figure — professional pipeline diagram.
+% Include with \input{fig_arch} inside a figure environment.
+% Requires: tikz, libraries: positioning, arrows.meta, calc, backgrounds, fit.
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  node distance=6mm and 10mm,
+  box/.style={rounded corners=2pt, draw=black!55, line width=0.6pt,
+              align=center, inner sep=5pt},
+  stage/.style={box, fill=black!4, minimum height=13mm, minimum width=27mm},
+  blknf4/.style={draw=black!45, fill=blue!12,  minimum width=23mm, minimum height=4.6mm, inner sep=1pt, rounded corners=1pt},
+  blkfp/.style={draw=black!45,  fill=orange!28, minimum width=23mm, minimum height=4.6mm, inner sep=1pt, rounded corners=1pt},
+  lora/.style={draw=teal!70!black, fill=teal!22, minimum width=5.2mm, minimum height=4.6mm, inner sep=0pt, rounded corners=1pt},
+  arr/.style={-{Stealth[length=2.6mm]}, line width=0.8pt, black!70},
+  lab/.style={font=\scriptsize\sffamily, black!60, align=center},
+  swatch/.style={draw=black!45, minimum width=3.6mm, minimum height=2.8mm, inner sep=0pt, rounded corners=1pt}
+]
+
+% ---------- Stage 1: checkpoint ----------
+\node[stage] (ckpt) {Pretrained\\checkpoint\\[1pt]{\scriptsize $W_1,\dots,W_L$ (fp16)}};
+
+% ---------- Stage 2: profiling ----------
+\node[stage, right=of ckpt, fill=violet!6] (prof)
+  {\textbf{One CPU profiling pass}\\[2pt]
+   {\scriptsize per layer $\ell$:}\\[-1pt]
+   {\scriptsize $\varepsilon_\ell=\mathrm{MSE}\!\big[W_\ell-\mathrm{NF4}(W_\ell)\big]$}\\[-1pt]
+   {\scriptsize $s_\ell=\Pr\big[|W_\ell|<\tau\big]$}};
+\node[lab, below=1mm of prof] {seconds, data-free, no search};
+\draw[arr] (ckpt) -- (prof);
+
+% ---------- Stage 3: the two maps ----------
+\node[box, above right=1mm and 9mm of prof.east, anchor=south west, fill=orange!12] (pmap)
+  {\textbf{Precision map}\\{\scriptsize top-$K$ by $\varepsilon_\ell\ \rightarrow$ fp16}\\{\scriptsize rest $\rightarrow$ NF4 (+DQ)}};
+\node[box, below right=1mm and 9mm of prof.east, anchor=north west, fill=teal!10] (amap)
+  {\textbf{Placement map}\\{\scriptsize adapters: all layers}\\{\scriptsize (quality) or top blocks (speed)}};
+\draw[arr] (prof.east) -- ++(4.5mm,0) |- (pmap.west);
+\draw[arr] (prof.east) -- ++(4.5mm,0) |- (amap.west);
+
+% ---------- Stage 4: assembled model (block stack) ----------
+% stack bottom-left reference; 7 blocks bottom->top, adapters on top 4
+\coordinate (base) at ($(prof.east)+(64mm,-14.5mm)$);
+\foreach \i/\style/\haslora in {0/blknf4/0, 1/blknf4/0, 2/blkfp/0, 3/blknf4/1, 4/blkfp/1, 5/blknf4/1, 6/blkfp/1}{
+  \node[\style] (blk\i) at ($(base)+(0,\i*5.4mm)$) {};
+  \ifnum\haslora=1
+    \node[lora] (lo\i) at ($(blk\i.east)+(4.6mm,0)$) {};
+    \draw[black!50, line width=0.5pt] (blk\i.east) -- (lo\i.west);
+  \fi
+}
+\node[font=\small\bfseries\sffamily, black!75, above=2mm of blk6.north] (title) {\method{}-quantized model};
+
+% maps -> model: precision map feeds the block colors (enter upper-left),
+% placement map feeds the adapter column (rise below the lowest adapter)
+\draw[arr] (pmap.east) to[out=0, in=180] ($(blk5.west)+(0,0)$);
+\draw[arr] (amap.east) -| (lo3.south);
+
+% backward-truncation: a HORIZONTAL cut between blk2 (frozen, no adapter) and
+% blk3 (lowest adapted block); the backward-pass arrow flows down and stops
+% exactly at the cut. Everything below the cut receives no gradient.
+\coordinate (cutY) at ($(blk2.north)!0.5!(blk3.south)$);
+\coordinate (cutL) at (blk3.west |- cutY);
+\coordinate (cutR) at (lo3.east   |- cutY);
+\draw[red!70!black, dashed, line width=1pt]
+  ($(cutL)+(-3mm,0)$) -- ($(cutR)+(11mm,0)$);
+% downward "backward pass" arrow, right of the adapter column, stopping at cut
+\coordinate (bpTop) at ($(lo6.east)+(6mm,0)$);
+\draw[arr, red!70!black, line width=0.9pt]
+  (bpTop) -- (bpTop |- cutY);
+\node[lab, red!70!black, anchor=west, align=left] at ($(bpTop)+(1.5mm,3mm)$)
+  {backward\\pass};
+\node[lab, red!70!black, anchor=west, align=left] at ($(cutR)+(12mm,0.7mm)$)
+  {\textbf{stops here}:\\blocks below get no gradient};
+
+% ---------- Stage 5: training ----------
+\node[stage, fill=green!7, anchor=west] (train) at ($(blk5.east)+(40mm,0)$)
+  {\textbf{Train}\\[1pt]{\scriptsize dynamic + length-grouped}\\[-1pt]
+   {\scriptsize batching, completion loss,}\\[-1pt]
+   {\scriptsize fused AdamW, fp16}};
+\draw[arr] ($(lo5.east)+(1.5mm,0)$) -- (train.west);
+
+% ---------- legend (below the stack, one row) ----------
+\node[swatch, fill=orange!28, anchor=west] (leg1) at ($(base)+(-12mm,-9.5mm)$) {};
+\node[lab, anchor=west] (leg1t) at (leg1.east) {\,fp16-protected (skips dequant)};
+\node[swatch, fill=blue!12, anchor=west] (leg2) at ($(leg1t.east)+(3mm,0)$) {};
+\node[lab, anchor=west] (leg2t) at (leg2.east) {\,NF4 4-bit};
+\node[swatch, fill=teal!22, anchor=west] (leg3) at ($(leg2t.east)+(3mm,0)$) {};
+\node[lab, anchor=west] (leg3t) at (leg3.east) {\,LoRA adapter ($r{=}8$)};
+
+% ---------- background band ----------
+\begin{scope}[on background layer]
+\node[box, fill=black!3, draw=black!25, inner sep=5pt,
+      fit=(ckpt)(prof)(pmap)(amap)(train)(blk0)(title)(leg1)(leg3t)] {};
+\end{scope}
+\end{tikzpicture}
