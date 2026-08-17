@@ -229,10 +229,76 @@ def _wrap_fp32_compute(model, skip_modules):
     return model
 
 
+def _residual_forward(self, x):
+    """Linear4bit forward with a second NF4 stage added to the first."""
+    import bitsandbytes as bnb
+    from bitsandbytes.nn.modules import fix_4bit_weight_quant_state_from_module
+    fix_4bit_weight_quant_state_from_module(self)
+    if not self.compute_type_is_set:
+        self.set_compute_type(x)
+        self.compute_type_is_set = True
+    inp_dtype = x.dtype
+    if self.compute_dtype is not None:
+        x = x.to(self.compute_dtype)
+    bias = None if self.bias is None else self.bias.to(self.compute_dtype)
+    out = bnb.matmul_4bit(x, self.weight.t(), bias=bias,
+                          quant_state=self.weight.quant_state)
+    out = out + bnb.matmul_4bit(x, self.weight_residual.t(), bias=None,
+                                quant_state=self.weight_residual.quant_state)
+    return out.to(inp_dtype)
+
+
+def apply_residual_protection(model, model_id, skip_modules):
+    """Protect sensitive layers with a second NF4 stage instead of fp16 storage.
+
+    The fp16 tier spends 16 bits per parameter to remove an error that a second
+    NF4 pass over the residual removes 99% of for 8.25. The idea is the
+    multi-stage vector quantizer from codec work, not a LoRA one: quantize,
+    then quantize what the first stage could not represent.
+
+    The trade is real in both directions. A protected layer no longer skips
+    dequantization, it does two, so this tier buys memory with speed. Which way
+    that lands is measured, not assumed.
+    """
+    import types
+    from bitsandbytes.nn import Params4bit
+    from bitsandbytes.functional import dequantize_4bit
+
+    ref = AutoModelForCausalLM.from_pretrained(
+        model_id, torch_dtype=torch.float16, device_map="cpu")
+    orig = {n: m.weight.data for n, m in ref.named_modules()
+            if isinstance(m, torch.nn.Linear)}
+
+    n = 0
+    for name, mod in model.named_modules():
+        if name not in skip_modules or name not in orig:
+            continue
+        w = getattr(mod, "weight", None)
+        if not isinstance(w, Params4bit):
+            continue
+        dev = w.device
+        # residual against what the first stage actually reconstructs, so the
+        # second stage corrects this quantizer rather than an idealised one
+        recon = dequantize_4bit(w.data, w.quant_state).to(torch.float16)
+        resid = orig[name].to(dev, torch.float16) - recon
+        mod.weight_residual = Params4bit(
+            resid.cpu(), requires_grad=False, quant_type=w.quant_type,
+            compress_statistics=w.compress_statistics).to(dev)
+        mod.forward = types.MethodType(_residual_forward, mod)
+        del recon, resid
+        n += 1
+
+    del ref, orig
+    gc.collect()
+    torch.cuda.empty_cache()
+    log(f"residual protection on {n} layers (second NF4 stage, not fp16)")
+    return model
+
+
 def load_base_model(model_id, mode, skip_modules, quant_type="nf4",
                     double_quant=True, for_training=True,
                     quant_backend="bnb", attn_impl="sdpa", grad_ckpt=True,
-                    fp32_protected=False, hqq_bits=4):
+                    fp32_protected=False, hqq_bits=4, protect_tier="fp16"):
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -256,7 +322,10 @@ def load_base_model(model_id, mode, skip_modules, quant_type="nf4",
             bnb_4bit_compute_dtype=torch.float16,
             # AQSLoRA: sensitive layers stay fp16. NOTE passing skip_modules
             # REPLACES bnb's default ["lm_head"], so re-add it explicitly.
-            llm_int8_skip_modules=(skip_modules + ["lm_head"]) if mode == "aqslora" else None,
+            # the residual tier quantizes the protected layers too, then adds a
+            # second stage to them, so nothing is skipped here
+            llm_int8_skip_modules=(skip_modules + ["lm_head"])
+            if (mode == "aqslora" and protect_tier == "fp16") else ["lm_head"],
         )
 
     model = AutoModelForCausalLM.from_pretrained(
@@ -268,7 +337,9 @@ def load_base_model(model_id, mode, skip_modules, quant_type="nf4",
         if grad_ckpt:
             model.gradient_checkpointing_enable(
                 gradient_checkpointing_kwargs={"use_reentrant": False})
-    if fp32_protected and mode == "aqslora" and skip_modules:
+    if mode == "aqslora" and protect_tier == "residual" and skip_modules and quant_cfg:
+        model = apply_residual_protection(model, model_id, skip_modules)
+    if fp32_protected and mode == "aqslora" and protect_tier == "fp16" and skip_modules:
         model = _wrap_fp32_compute(model, skip_modules)
     footprint = model.get_memory_footprint() / 2**30
     log(f"base model footprint ({mode}, {quant_backend if quant_cfg else 'fp16'}): "

@@ -29,6 +29,9 @@ def parse_args():
     p.add_argument("--quant-type", choices=["nf4", "fp4"], default="nf4")
     p.add_argument("--no-double-quant", action="store_true")
     p.add_argument("--sensitive-frac", type=float, default=0.10)
+    # how a protected layer is stored: fp16 (exact, +11.9 bits/param) or a
+    # second NF4 stage over its residual (99% of the error gone, +4.1 bits)
+    p.add_argument("--protect-tier", choices=["fp16", "residual"], default="fp16")
     p.add_argument("--adapter-frac", type=float, default=0.70)
     p.add_argument("--cs-max-train", type=int, default=-1)
     p.add_argument("--output-dir", default=None)
@@ -133,7 +136,8 @@ def main():
         quant_type=ARGS.quant_type, double_quant=not ARGS.no_double_quant,
         for_training=True, quant_backend=ARGS.quant_backend,
         attn_impl=ARGS.attn, grad_ckpt=not ARGS.no_grad_ckpt,
-        fp32_protected=ARGS.fp32_protected, hqq_bits=ARGS.hqq_bits)
+        fp32_protected=ARGS.fp32_protected, hqq_bits=ARGS.hqq_bits,
+        protect_tier=ARGS.protect_tier)
 
     ppl_base = None
     if ARGS.ppl_base:

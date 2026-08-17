@@ -5,10 +5,29 @@ Contention only slows a run, never speeds it up, so the samples have a ceiling a
 the true speed and a slow tail. The estimate is the mean of the fastest half:
 several runs, so not one lucky maximum, but without the interference-slowed tail.
 """
-import json, glob, statistics as st, sys
+import json, glob, os, statistics as st, sys, time
 
 DIR = sys.argv[1] if len(sys.argv) > 1 else "timing-session2-phi15"
-METHODS = ["qlora", "aq-q", "aq-s", "rslora", "loftq", "lora16"]
+METHODS = ["qlora", "qlora-b", "aq-q", "aq-s", "rslora", "loftq", "lora16",
+           "aq-f10", "aq-f05", "aq-r20", "aq-r40"]
+SESSION_GAP_H = 6.0   # hours of silence that separate one sweep from the next
+
+
+def newest_session(paths):
+    """Keep only the most recent sweep's files.
+
+    Sweeps write into the same directory and overwrite by tag, so a sweep that
+    dies partway leaves the tail of an older one behind. Those files look
+    identical to fresh ones. Mixing a discarded sweep into a clean one is the
+    failure this whole protocol exists to prevent, so cut at the largest gap in
+    write times and report what was dropped rather than averaging across it.
+    """
+    stamped = sorted(((os.path.getmtime(p), p) for p in paths))
+    cut = 0
+    for i in range(1, len(stamped)):
+        if stamped[i][0] - stamped[i - 1][0] > SESSION_GAP_H * 3600:
+            cut = i
+    return [p for _, p in stamped[cut:]], [p for _, p in stamped[:cut]]
 
 
 def fast_anchored(vals, frac=0.5):
@@ -29,12 +48,23 @@ def fast_anchored(vals, frac=0.5):
 
 
 print(f"=== robust timing from {DIR} ===")
+keep, dropped = newest_session(glob.glob(f"{DIR}/*-r*/timing.json"))
+if dropped:
+    old = time.strftime('%m-%d %H:%M', time.localtime(os.path.getmtime(dropped[-1])))
+    new = time.strftime('%m-%d %H:%M', time.localtime(os.path.getmtime(keep[0])))
+    print(f"provenance: {len(dropped)} file(s) from an earlier sweep (to {old}) "
+          f"excluded; this sweep starts {new}")
+    for p in sorted(dropped):
+        print(f"  dropped {os.path.basename(os.path.dirname(p))}")
+keep = set(keep)
 print(f"{'method':8} {'n':>2} {'all samples (steps/s, fastest first)':<44} "
       f"{'fast-k':>8} {'spread':>7} {'mean':>7} {'max':>7}")
 res = {}
 for m in METHODS:
     vals = []
     for j in sorted(glob.glob(f"{DIR}/{m}-r*/timing.json")):
+        if j not in keep:
+            continue
         try:
             vals.append(json.load(open(j))["steps_per_sec"])
         except Exception:

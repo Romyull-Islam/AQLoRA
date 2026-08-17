@@ -1,0 +1,28 @@
+{
+  "model": "meta-llama/Llama-3.2-1B",
+  "mode": "qlora",
+  "task": "commonsense",
+  "rank": 8,
+  "seed": 43,
+  "quant_type": "nf4",
+  "double_quant": true,
+  "sensitive_frac": null,
+  "adapter_frac": null,
+  "placement": null,
+  "quant_backend": "bnb",
+  "attn": "sdpa",
+  "fp32_protected": false,
+  "skip_modules": [
+    "model.layers.0.self_attn.k_proj",
+    "model.layers.1.self_attn.k_proj",
+    "model.layers.0.self_attn.q_proj",
+    "model.layers.8.self_attn.k_proj",
+    "model.layers.2.self_attn.k_proj",
+    "model.layers.6.self_attn.k_proj",
+    "model.layers.11.self_attn.k_proj",
+    "model.layers.7.self_attn.k_proj",
+    "model.layers.5.self_attn.k_proj",
+    "model.layers.12.self_attn.k_proj",
+    "model.layers.4.self_attn.k_proj"
+  ]
+}

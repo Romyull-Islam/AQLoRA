@@ -24,6 +24,9 @@ def parse_args():
     p.add_argument("--max-seq-len", type=int, default=600)
     p.add_argument("--rslora-scaling", action="store_true")
     p.add_argument("--sensitive-frac", type=float, default=0.20)
+    # a protected layer skips dequantization under the fp16 tier and does two
+    # under the residual tier, so the tier is a speed variable, not just memory
+    p.add_argument("--protect-tier", choices=["fp16", "residual"], default="fp16")
     p.add_argument("--adapter-frac", type=float, default=1.0)
     p.add_argument("--warmup-skip", type=int, default=20, help="steps to discard as warmup")
     p.add_argument("--output-dir", default="./timing-out")
@@ -99,7 +102,7 @@ def main():
     model, tok, base_gib = core.load_base_model(
         A.model, A.mode, skip, for_training=True,
         quant_backend=A.quant_backend, attn_impl=A.attn,
-        grad_ckpt=not A.no_grad_ckpt)
+        grad_ckpt=not A.no_grad_ckpt, protect_tier=A.protect_tier)
     n_base = sum(p.numel() for p in model.parameters())
 
     model, tr = core.attach_lora(

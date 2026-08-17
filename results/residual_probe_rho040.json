@@ -1,0 +1,31 @@
+{
+  "model": "microsoft/phi-1_5",
+  "rho": 0.4,
+  "protected_params": 394264576,
+  "total_params": 1207959552,
+  "tiers": {
+    "nf4_b64": {
+      "bits": 4.127,
+      "mse": 1.2457881555437392e-05,
+      "premium_bits": 0.0
+    },
+    "nf4_b32": {
+      "bits": 4.254,
+      "mse": 1.1042976129442166e-05,
+      "premium_bits": 0.12699999999999978,
+      "premium_gib": 0.00582910156249999
+    },
+    "residual": {
+      "bits": 8.254,
+      "mse": 1.1318351071506495e-07,
+      "premium_bits": 4.127,
+      "premium_gib": 0.1894228515625
+    },
+    "fp16": {
+      "bits": 16.0,
+      "mse": 0.0,
+      "premium_bits": 11.873000000000001,
+      "premium_gib": 0.5449521484375001
+    }
+  }
+}

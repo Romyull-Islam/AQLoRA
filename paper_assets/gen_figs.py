@@ -41,11 +41,19 @@ def rj(name):
 
 
 # gather main-table points: (label, avg%, min, peak, base, color, is_ours, marker)
+# accuracy is the mean over every seed on disk, matching Table 1; minutes and
+# memory come from the seed-42 run, matching the table's stated policy (the
+# repeat seeds trained concurrently, so their wall-clock is contended)
+SEEDS = ["", "-s43", "-s44", "-s45", "-s46", "-s47"]
+
+
 def pt(name, label, color, ours=False, mk="o"):
     d = rj(name)
     if not d:
         return None
-    return dict(label=label, avg=avg8(d["commonsense"]),
+    accs = [avg8(x["commonsense"])
+            for x in (rj(name + s) for s in SEEDS) if x]
+    return dict(label=label, avg=sum(accs) / len(accs),
                 mins=d.get("train_minutes"), peak=d.get("peak_train_gib"),
                 base=d.get("base_model_gib"), color=color, ours=ours, mk=mk)
 
@@ -99,8 +107,8 @@ def fig_pareto():
     # "better" direction arrow in the empty upper-right corner
     x1 = max(p["mins"] for p in PTS if p["mins"])
     y1 = max(p["avg"] for p in PTS if p["mins"])
-    ax.annotate("better", xy=(x1 * 0.62, y1 + 0.05), xytext=(x1 * 0.82, y1 - 0.35),
-                fontsize=8, color="#333333",
+    ax.annotate("better", xy=(x1 * 0.78, y1 + 0.04), xytext=(x1 * 0.95, y1 - 0.22),
+                fontsize=8, color="#333333", ha="center",
                 arrowprops=dict(arrowstyle="->", lw=1.1, color="#333333"))
     ax.legend(handles=handles, loc="lower right", fontsize=7.2, ncol=2,
               handletextpad=0.3, columnspacing=0.8, borderpad=0.4)

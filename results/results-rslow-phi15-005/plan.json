@@ -1,0 +1,24 @@
+{
+  "model": "microsoft/phi-1_5",
+  "mode": "aqslora",
+  "task": "commonsense",
+  "rank": 8,
+  "seed": 42,
+  "quant_type": "nf4",
+  "double_quant": true,
+  "sensitive_frac": 0.05,
+  "adapter_frac": 1.0,
+  "placement": "sparsity",
+  "quant_backend": "bnb",
+  "attn": "sdpa",
+  "fp32_protected": false,
+  "skip_modules": [
+    "model.layers.23.self_attn.q_proj",
+    "model.layers.0.self_attn.k_proj",
+    "model.layers.0.self_attn.q_proj",
+    "model.layers.23.self_attn.k_proj",
+    "model.layers.22.self_attn.q_proj",
+    "model.layers.15.self_attn.q_proj",
+    "model.layers.22.mlp.fc2"
+  ]
+}
