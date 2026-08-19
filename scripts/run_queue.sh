@@ -1,8 +1,6 @@
 #!/bin/bash
 # Priority job queue. Waits for a GENUINELY idle GPU before starting anything, so
 # it neither contends with other users nor with its own earlier jobs.
-#
-# usage: nohup ./run_queue.sh > queue.log 2>&1 &
 set -u
 cd "$(dirname "$0")"
 PY=./venv/bin/python
@@ -24,7 +22,7 @@ wait_for() {  # wait_for <fn> ; echoes the gpu index once available
   while :; do g=$($f); [ -n "$g" ] && { echo "$g"; return; }; sleep 300; done
 }
 
-# ---------------------------------------------------------------- timing jobs
+# timing jobs
 # 7 interleaved repeats per method, matching the protocol already used for
 # phi-1.5, so the new numbers are comparable within their own session.
 timing_sweep() {   # timing_sweep <model> <tag> <gpu> <methods...>
@@ -56,7 +54,7 @@ timing_sweep meta-llama/Llama-3.2-1B llama-3.2-1b "$G" \
   "qlora:--mode qlora" "aq-q:$AQQ" "aq-s:$AQS" "lora16:--mode lora16" \
   "rslora:--mode rslora" "loftq:--mode loftq"
 
-# -------------------------------------------------------------- accuracy jobs
+# accuracy jobs
 echo "[$(STAMP)] timing done; starting E3 seed-43 grid"
 for spec in sparsity:5 random:5 weightnorm:5 sparsity:7 random:7 weightnorm:7; do
   m=${spec%%:*}; a=${spec##*:}

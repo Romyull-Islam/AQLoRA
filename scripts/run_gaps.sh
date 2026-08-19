@@ -12,12 +12,12 @@ free_gpu() {
 }
 wait_gpu() { local g; while :; do g=$(free_gpu); [ -n "$g" ] && { echo "$g"; return; }; sleep 240; done; }
 
-# ---------------------------------------------------------------- gap 1
+# gap 1
 echo "[$(STAMP)] GAP 1: Llama clean timing (alone on the node)"
 ./run_timing_clean.sh meta-llama/Llama-3.2-1B llama-3.2-1b 7
 echo "[$(STAMP)] GAP 1 done"
 
-# ---------------------------------------------------------------- gap 2
+# gap 2
 # Table 1 reports single-seed numbers for the methods the narrative compares.
 # Two more seeds each turns those cells into mean +/- std.
 echo "[$(STAMP)] GAP 2: extra seeds for the contested Table-1 cells"
@@ -39,7 +39,7 @@ done
 wait
 echo "[$(STAMP)] GAP 2 done"
 
-# ---------------------------------------------------------------- gap 3
+# gap 3
 # The rank sweep covers phi-1.5 only. r=8 already exists from the main table, so
 # r=16 and r=32 are enough to show whether the ordering, and rsLoRA's collapse,
 # reproduce on a second architecture.

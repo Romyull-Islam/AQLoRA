@@ -1,26 +1,6 @@
 #!/bin/bash
-# ============================================================================
 # Publication-grade timing (short: minutes per config, ~1-2 h total).
-#
 # WHY THIS IS DEFENSIBLE ON A SHARED NODE:
-#   Timing measures throughput, not accuracy, and needs only ~60 steady steps.
-#   Contention from another user can only ever SLOW a run, never speed it up.
-#   So we run each config a few times and keep the FASTEST (min wall / max
-#   steps/s): any run that overlapped someone else's job is simply the slow one
-#   and is discarded. This gives the uncontended speed without needing exclusive
-#   access (which a scheduler-less node cannot guarantee).
-#
-# WHAT IT DOES:
-#   - reserves the spare GPUs idle (gpu_hold.py) to reduce interference,
-#   - runs timing.py N times per method on ONE GPU (warmup discarded,
-#     steady-state under cuda.synchronize), reports the best (max steps/s),
-#   - times only the 4 methods that carry the speed story; others share a
-#     profile (rsLoRA/LoftQ ~ QLoRA) or are known-slow (QDoRA ~2x).
-#
-# usage: ./run-timing-clean.sh MODEL TIMING_GPU HOLD_GPUS [N] [STEPS]
-#   e.g. ./run-timing-clean.sh microsoft/phi-1_5      1 "0,3,4,5,6,7" 3 80
-#        ./run-timing-clean.sh microsoft/Phi-3-mini-4k-instruct 1 "0,3,4,5,6,7" 3 80
-# ============================================================================
 set -u
 PY=${PYTHON:-python}
 MODEL=$1; TGPU=$2; HOLD=$3; N=${4:-3}; STEPS=${5:-80}
