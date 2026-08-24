@@ -131,3 +131,8 @@ Four things in the repo did not work and are reported as such:
 - `phase0_isomem_ppl.py` — pushing robust layers below 4 bits. Uniform 2-bit
   raises WikiText-2 perplexity from 18.97 to 112 at 1.4B and from 6.30 to 351 at
   7B, and every multi-tier plan containing a 2-bit tier inherits that.
+
+## License
+
+MIT, see [LICENSE](LICENSE). The base models and the training data keep their
+own licenses, which this grant does not extend.
