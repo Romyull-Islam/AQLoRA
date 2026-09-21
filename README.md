@@ -19,6 +19,9 @@ phase0_isomem_ppl.py   sub-4-bit and multi-tier study (the negative result)
 arch_profile.py        what a layer budget costs per architecture
 make_ranking_controls.py  builds top-K / random / bottom-K layer sets
 ranking_null_distribution.py  the ranking against budget-matched random draws
+timing_sensitivity.py  speed result under four estimators, with and without
+                       the floor-failing sessions
+unsloth_overlap.py     our selection against Unsloth's hand-curated list
 residual_protect_probe.py  two-stage NF4 as a cheaper protection tier (offline)
 scripts/               campaign launchers
 paper_assets/          builds the figures and appendix tables from the artifacts
