@@ -99,7 +99,7 @@ def fig_pareto():
         # peak memory in the legend: fp16 wins on time and accuracy but sits in
         # a different memory class, and the frontier is only meaningful within
         # a class. Without this the reader cannot see which points can coexist.
-        lab = f"{lab}, {p['peak']:.1f}\u2009GiB"
+        lab = f"{lab}, {p['peak']:.2f}\u2009GiB"
         handles.append(Line2D([0], [0], marker=p["mk"], ls="", markersize=7,
                               markerfacecolor=p["color"], markeredgecolor="black",
                               markeredgewidth=0.6, label=lab))
