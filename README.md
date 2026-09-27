@@ -22,6 +22,8 @@ ranking_null_distribution.py  the ranking against budget-matched random draws
 timing_sensitivity.py  speed result under four estimators, with and without
                        the floor-failing sessions
 unsloth_overlap.py     our selection against Unsloth's hand-curated list
+summarize_ranking_null.py  the error ranking against matched-random selection,
+                       under both the count-matched and parameter-matched controls
 residual_protect_probe.py  two-stage NF4 as a cheaper protection tier (offline)
 scripts/               campaign launchers
 paper_assets/          builds the figures and appendix tables from the artifacts
@@ -119,12 +121,17 @@ deterministic kernels. The error bars measure run-to-run variation.
 
 Four things in the repo did not work and are reported as such:
 
-- The NF4-error ranking itself: at a fixed budget, ten random layer selections
-  matched to the same parameter count recover more base perplexity on average
-  than the top-K selection, and downstream accuracy cannot separate top-K,
-  random, and bottom-K (`make_ranking_controls.py`,
-  `ranking_null_distribution.py`, `results/ranking_null.json`). The count of
-  protected layers carries the effect; the identity does not measurably.
+- The NF4-error ranking itself. Tested on five models at three budgets against
+  random selections matched on protected parameters, top-K beats the median draw
+  in 11 of 15 settings, which a sign test does not separate from chance
+  (p=0.12), and the median gap is 0.01 perplexity. Downstream accuracy cannot
+  separate top-K, matched random, and bottom-K on either model tested
+  (`ranking_null_distribution.py --match params`, `summarize_ranking_null.py`,
+  `results/ranking_null_*.json`, `results/results-cs-phi-3-mini-ctrl-*`). The
+  count of protected layers carries the effect; the identity does not measurably.
+  Matching the draws on layer count instead of parameters is not a valid control:
+  where layer sizes vary, the most damaged layers are smaller than average, so a
+  same-count draw carries more memory. On Llama-3.2-1B that reached 11%.
 - The weight-density rule for choosing which layers to adapt does no better than
   a random subset at the same budget (`--placement sparsity|weightnorm|random`).
 - A two-stage NF4 protection tier (`residual_protect_probe.py`,

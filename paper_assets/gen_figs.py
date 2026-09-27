@@ -96,6 +96,10 @@ def fig_pareto():
                    alpha=0.5 if is_fp16(p) else 0.95,
                    zorder=4 if p["ours"] else 3)
         lab = (p["label"] + " (ours)") if p["ours"] else p["label"]
+        # peak memory in the legend: fp16 wins on time and accuracy but sits in
+        # a different memory class, and the frontier is only meaningful within
+        # a class. Without this the reader cannot see which points can coexist.
+        lab = f"{lab}, {p['peak']:.1f}\u2009GiB"
         handles.append(Line2D([0], [0], marker=p["mk"], ls="", markersize=7,
                               markerfacecolor=p["color"], markeredgecolor="black",
                               markeredgewidth=0.6, label=lab))
