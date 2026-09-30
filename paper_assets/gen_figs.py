@@ -70,6 +70,27 @@ PTS = [p for p in [
 ] if p]
 
 
+# Throughput from the controlled timing session behind Table 5 (fast-anchored
+# estimate over seven interleaved repeats). The accuracy runs' wall-clock came
+# from a shared node and is not a timing measurement, so the Pareto x-axis uses
+# this instead. Methods never timed under the protocol (QDoRA, DoRA) have no x.
+TIMING_DIR = f"{ROOT}/aqlora-repo/results/timing-session2-phi15"
+ARM = {"AQLoRA-q": "aq-q", "AQLoRA-s": "aq-s", "QLoRA": "qlora", "rsLoRA": "rslora",
+       "LoftQ": "loftq", "LoRA (fp16)": "lora16"}
+
+
+def _fast_half(v):
+    v = sorted(v, reverse=True)
+    return sum(v[:max(2, round(0.5 * len(v)))]) / max(2, round(0.5 * len(v)))
+
+
+for p in PTS:
+    arm = ARM.get(p["label"])
+    v = [json.load(open(f))["steps_per_sec"]
+         for f in glob.glob(f"{TIMING_DIR}/{arm}-r*/timing.json")] if arm else []
+    p["sps"] = _fast_half(v) if v else None
+
+
 # FIG 1: Pareto (accuracy vs training time). Legend, not inline labels,
 #      so the crowded cluster stays readable. Faster = left (natural).
 def fig_pareto():
@@ -77,45 +98,46 @@ def fig_pareto():
     fig, ax = plt.subplots(figsize=(5.0, 3.6))
     ax.set_axisbelow(True)
     is_fp16 = lambda p: "fp16" in p["label"]
+    P = [p for p in PTS if p.get("sps")]
     # frontier over the quantized class only (fp16 is a different memory class)
-    Q = [p for p in PTS if p["mins"] and not is_fp16(p)]
-    dom = [(p["mins"], p["avg"]) for p in Q
-           if not any(q["mins"] <= p["mins"] and q["avg"] >= p["avg"] and q is not p for q in Q)]
+    Q = [p for p in P if not is_fp16(p)]
+    dom = [(p["sps"], p["avg"]) for p in Q
+           if not any(q["sps"] >= p["sps"] and q["avg"] >= p["avg"] and q is not p for q in Q)]
     dom.sort()
     ax.plot([d[0] for d in dom], [d[1] for d in dom], "--", color=C["aqs"],
             lw=1.3, zorder=1)
     handles = [Line2D([0], [0], ls="--", color=C["aqs"], lw=1.3,
                       label="quantized frontier")]
-    # plot points, larger + bordered for ours; fixed-size legend handles
-    for p in PTS:
-        if p["mins"] is None:
-            continue
-        ax.scatter(p["mins"], p["avg"], s=170 if p["ours"] else 85, marker=p["mk"],
+    for p in P:
+        ax.scatter(p["sps"], p["avg"], s=170 if p["ours"] else 85, marker=p["mk"],
                    facecolor=p["color"], edgecolor="black",
                    linewidth=1.1 if p["ours"] else 0.6,
                    alpha=0.5 if is_fp16(p) else 0.95,
                    zorder=4 if p["ours"] else 3)
         lab = (p["label"] + " (ours)") if p["ours"] else p["label"]
-        # peak memory in the legend: fp16 wins on time and accuracy but sits in
+        # peak memory in the legend: fp16 wins on speed and accuracy but sits in
         # a different memory class, and the frontier is only meaningful within
         # a class. Without this the reader cannot see which points can coexist.
         lab = f"{lab}, {p['peak']:.2f}\u2009GiB"
         handles.append(Line2D([0], [0], marker=p["mk"], ls="", markersize=7,
                               markerfacecolor=p["color"], markeredgecolor="black",
                               markeredgewidth=0.6, label=lab))
-    ax.set_xlabel("training time (min, single V100); lower is faster")
+    ax.set_xlabel("training throughput (steps/s, controlled protocol)")
     ax.set_ylabel("Commonsense 8-task accuracy (%)")
     ax.grid(True, color=C["grid"], lw=0.5)
     from matplotlib.ticker import FormatStrFormatter
+    from matplotlib.ticker import MultipleLocator
+    ax.yaxis.set_major_locator(MultipleLocator(0.2))   # ticks land on printed values
     ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
-    # "better" direction arrow in the empty upper-right corner
-    x1 = max(p["mins"] for p in PTS if p["mins"])
-    y1 = max(p["avg"] for p in PTS if p["mins"])
-    ax.annotate("better", xy=(x1 * 0.78, y1 + 0.04), xytext=(x1 * 0.95, y1 - 0.22),
+    ax.xaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+    x0 = min(p["sps"] for p in P); x1 = max(p["sps"] for p in P)
+    y1 = max(p["avg"] for p in P)
+    ax.annotate("better", xy=(x0 + 0.62 * (x1 - x0), y1 + 0.1),
+                xytext=(x0 + 0.40 * (x1 - x0), y1 - 0.25),
                 fontsize=8, color="#333333", ha="center",
                 arrowprops=dict(arrowstyle="->", lw=1.1, color="#333333"))
-    ax.legend(handles=handles, loc="lower right", fontsize=7.2, ncol=2,
-              handletextpad=0.3, columnspacing=0.8, borderpad=0.4)
+    ax.legend(handles=handles, loc="lower right", fontsize=7.2, ncol=1,
+              handletextpad=0.3, borderpad=0.4)
     fig.savefig("fig_pareto.pdf")
     plt.close(fig)
     print("wrote fig_pareto.pdf")
