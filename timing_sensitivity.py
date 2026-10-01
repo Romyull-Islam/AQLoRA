@@ -15,11 +15,14 @@ ROOT = sys.argv[1] if len(sys.argv) > 1 else "results"
 GAP_H = 6.0          # hours of silence that separate one sweep from the next
 FLOOR = 3.0          # duplicate-arm disagreement (%) above which a session is out
 
-# The nine sessions that pass the floor test, and the five that do not.
+# The thirteen sessions that pass the floor test, and the five that do not.
 CLEAN = ["timing-session2-phi15", "timing-sess-phi15-s2", "timing-llama-fixedwindow",
          "timing-sess-llama-3.2-1b-s1", "timing-llama-3.2-3b-retry",
          "timing-floor-phi-3-mini", "timing-phi-3-mini", "timing-sess-phi-3-mini-s2",
-         "timing-clean-qwen2.5-7b-validated"]
+         "timing-clean-qwen2.5-7b-validated",
+         # between-session replicates for the two single-session models
+         "timing-sess-qwen2.5-7b-s2", "timing-sess-qwen2.5-7b-s3",
+         "timing-sess-llama-3.2-3b-s2", "timing-sess-llama-3.2-3b-s3"]
 EXCLUDED = ["timing-floor-phi15", "timing-sess-phi15-s1", "timing-sess-llama-3.2-1b-s2",
             "timing-llama-3.2-3b", "timing-sess-phi-3-mini-s1-starved"]
 
