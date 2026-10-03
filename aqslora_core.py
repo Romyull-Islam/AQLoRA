@@ -104,6 +104,8 @@ def make_adapter_plan(stats, adapter_frac, placement="sparsity", seed=42):
                  pass at the lowest adapted block.
     weightnorm : largest mean |w| layers (control).
     random     : uniform random subset (control).
+    depthmatched : random subset with the density rule's count per third of
+                 the network (control for its depth skew).
     """
     k = max(1, int(len(stats) * adapter_frac))
     if placement == "weightnorm":
@@ -115,6 +117,24 @@ def make_adapter_plan(stats, adapter_frac, placement="sparsity", seed=42):
         rng = _rnd.Random(seed)
         chosen = [s["name"] for s in rng.sample(stats, k)]
         log(f"adapters (random baseline, seed {seed}): LoRA on {k}/{len(stats)} layers")
+    elif placement == "depthmatched":
+        # Control for the density rule: random layers, but as many in each third
+        # of the network as the density rule picks at the same budget. If the
+        # density rule loses because it moves adapters up the network, this set
+        # should lose too; if it loses for another reason, this set should not.
+        import random as _rnd
+        rng = _rnd.Random(seed)
+        ref = make_adapter_plan(stats, adapter_frac, placement="sparsity")
+        nb = max((b for b in (_block_idx(s["name"]) for s in stats) if b is not None),
+                 default=0) + 1
+        third = lambda n: min(2, (_block_idx(n) or 0) * 3 // nb)
+        chosen = []
+        for t in range(3):
+            pool = [s["name"] for s in stats if third(s["name"]) == t]
+            want = sum(1 for n in ref if third(n) == t)
+            chosen += rng.sample(pool, want)
+        log(f"adapters (depth-matched random, seed {seed}): LoRA on {len(chosen)}/"
+            f"{len(stats)} layers, per-third counts matched to the density rule")
     elif placement == "depth":
         max_blk = max((b for b in (_block_idx(s["name"]) for s in stats)
                        if b is not None), default=0)

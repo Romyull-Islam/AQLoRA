@@ -38,7 +38,7 @@ def parse_args():
     p.add_argument("--seed", type=int, default=42)
     # Speed levers (each one is an ablation dial)
     p.add_argument("--placement",
-                   choices=["sparsity", "depth", "weightnorm", "random"],
+                   choices=["sparsity", "depth", "weightnorm", "random", "depthmatched"],
                    default="sparsity",
                    help="adapter placement: 'sparsity' (least-sparse anywhere), "
                         "'depth' (top blocks -> backprop truncation), "

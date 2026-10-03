@@ -100,3 +100,15 @@ for label, est in ESTIMATORS.items():
     for sess, tag in ((CLEAN, "clean"), (CLEAN + EXCLUDED, "all")):
         q, s = gains(sess, est)
         print(f"  {label:15} {tag:16} {len(q):2d} {fmt(q):>14} {fmt(s):>14}")
+
+# Two subsets of the clean sessions, for the two ways the protocol varied:
+# sessions with a duplicated QLoRA arm (the others rely on a proxy floor), and
+# sessions that waited for an empty timing GPU before each run (the earliest
+# phi-1.5 session held the node's other GPUs idle instead).
+DUP = [n for n in CLEAN if floor_of(samples(n)) is not None]
+GUARDED = [n for n in CLEAN if n != "timing-session2-phi15"]
+print("\nsubsets of the clean sessions (fastest half)\n")
+for label, sess in (("duplicate-arm only", DUP), ("empty-card check only", GUARDED)):
+    q, s = gains(sess, fastest_half)
+    print(f"  {label:22} n={len(q):2d} {fmt(q):>14} {fmt(s):>14}")
+

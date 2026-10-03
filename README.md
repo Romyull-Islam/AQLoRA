@@ -22,6 +22,7 @@ ranking_null_distribution.py  the ranking against budget-matched random draws
 timing_sensitivity.py  speed result under four estimators, with and without
                        the floor-failing sessions
 unsloth_overlap.py     our selection against Unsloth's hand-curated list
+time_profiling_pass.py  wall-time of the profiling pass on CPU, per model
 summarize_ranking_null.py  the error ranking against matched-random selection,
                        under both the count-matched and parameter-matched controls
 residual_protect_probe.py  two-stage NF4 as a cheaper protection tier (offline)
@@ -134,8 +135,11 @@ Four things in the repo did not work and are reported as such:
   same-count draw carries more memory. On Llama-3.2-1B that reached 11%.
 - The weight-density rule for choosing which layers to adapt does no better than
   a random subset at the same budget (`--placement sparsity|weightnorm|random`).
+  `--placement depthmatched` draws random layers with the density rule's count
+  in each third of the network, to test whether its depth profile is the cause
+  (`scripts/run_e3_depthmatched.sh`).
 - A two-stage NF4 protection tier (`residual_protect_probe.py`,
-  `--protect-tier residual`) removes 110x of the protected layers' quantization
+  `--protect-tier residual`, runs `results/results-resid-phi15-*`) removes 110x of the protected layers' quantization
   error at a third of fp16's memory premium, and is still dominated: lowering
   the budget reaches the same accuracy at less memory and no speed cost.
 - `phase0_isomem_ppl.py` — pushing robust layers below 4 bits. Uniform 2-bit
