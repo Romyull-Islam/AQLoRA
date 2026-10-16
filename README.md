@@ -1,5 +1,7 @@
 # AQLoRA: A Zero-Search Recipe for Fast Quantized LoRA Fine-Tuning
 
+Paper: [arXiv:2608.23816](https://arxiv.org/abs/2608.23816)
+
 Code and run artifacts for the paper. One CPU pass over the weights sets
 per-layer precision and adapter placement, with no search and no calibration
 data. Everything runs on the stock HuggingFace / bitsandbytes / PEFT stack: no
@@ -150,3 +152,13 @@ Four things in the repo did not work and are reported as such:
 
 MIT, see [LICENSE](LICENSE). The base models and the training data keep their
 own licenses, which this grant does not extend.
+
+## Related projects
+
+Part of my work on efficient LLM systems ([all projects](https://github.com/Romyull-Islam)):
+
+- [μKV (EndurKV)](https://github.com/Romyull-Islam/EndurKV): KV-cache eviction with in-place compaction for LLM inference on a phone
+- [SemSched](https://github.com/Romyull-Islam/SemSched): memory capacity vs. prefetch bandwidth for LLM inference on hybrid CXL devices
+- [SLMs on the edge](https://github.com/Romyull-Islam/SLM): performance of small language models on Raspberry Pi, Jetson Orin and Mac mini (IEEE IPCCC 2024)
+- [VLM-Benchmarking](https://github.com/Romyull-Islam/VLM-Benchmarking): accuracy, time and energy of small vision-language models on Jetson AGX Orin
+- [Build, Train, Deploy](https://github.com/Romyull-Islam/llm_booklet): an open five-week LLM course in PyTorch
