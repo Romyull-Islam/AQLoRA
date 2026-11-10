@@ -1,11 +1,15 @@
-# AQLoRA: A Zero-Search Recipe for Fast Quantized LoRA Fine-Tuning
+# AQLoRA: Faster Quantized LoRA Fine-Tuning Without Custom Kernels
 
-Paper: [arXiv:2608.23816](https://arxiv.org/abs/2608.23816)
+Code and run artifacts for the paper *Faster Quantized LoRA Fine-Tuning Without
+Custom Kernels: What Works, What Does Not, and How to Measure It*. A fixed
+fraction of the linear layers stays in fp16, which skips their dequantization,
+and the speed setting adapts only the top blocks so the backward pass stops
+early. Everything runs on the stock HuggingFace / bitsandbytes / PEFT stack,
+with no custom kernels and no FP8 hardware. All results come from NVIDIA
+V100-SXM2-32GB GPUs.
 
-Code and run artifacts for the paper. One CPU pass over the weights sets
-per-layer precision and adapter placement, with no search and no calibration
-data. Everything runs on the stock HuggingFace / bitsandbytes / PEFT stack: no
-custom kernels, no FP8 hardware.
+An earlier version of the paper is on arXiv as
+[arXiv:2608.23816](https://arxiv.org/abs/2608.23816).
 
 ## Layout
 
@@ -109,8 +113,8 @@ paper's headline speed figures come from the last of them:
   (`scripts/run_timing_floors.sh`).
 - A within-session floor understates the real uncertainty. Repeating whole
   sessions moves the numbers far more than any within-session error bar
-  predicts, so the paper reports speed as mean and standard deviation over nine
-  clean sessions (`scripts/run_timing_sessions.sh`; sweeps that fail the floor
+  predicts, so the paper reports speed as mean and standard deviation over
+  thirteen clean sessions (`scripts/run_timing_sessions.sh`; sweeps that fail the floor
   test are in `results/` too, as the audit trail).
 
 Wall-clock minutes in the accuracy tables come from shared-node runs and are

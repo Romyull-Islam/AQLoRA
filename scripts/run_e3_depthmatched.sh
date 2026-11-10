@@ -1,6 +1,6 @@
 #!/bin/bash
 # Controlled ablation for the density rule: random adapters with the density
-# rule's per-third depth profile, phi-1.5, alpha=.5, both seeds of Table 15.
+# rule's per-third depth profile, phi-1.5, alpha=.5, both seeds of the placement table.
 set -u
 cd "$(dirname "$0")"
 PY=./venv/bin/python

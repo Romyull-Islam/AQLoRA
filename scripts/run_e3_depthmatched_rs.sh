@@ -1,5 +1,5 @@
 #!/bin/bash
-# The seed-42 placement runs of Table 15 used rsLoRA scaling; the seed-43 runs did
+# The seed-42 placement runs of the placement table used rsLoRA scaling; the seed-43 runs did
 # not. This adds the depth-matched control to the seed-42, rsLoRA-scaled column.
 set -u
 cd "$(dirname "$0")"

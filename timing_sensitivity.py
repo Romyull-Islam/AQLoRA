@@ -1,7 +1,7 @@
 """Does the speed result depend on the estimator or the exclusion rule?
 
 Recomputes the pooled speed numbers under four estimators, with and without
-the sessions that fail the duplicate-arm floor test. Reproduces Appendix M.
+the sessions that fail the duplicate-arm floor test. Reproduces the estimator table in the paper's appendix.
 
 usage: python timing_sensitivity.py [results_dir]
 """
